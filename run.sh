@@ -11,6 +11,11 @@
 # activate environment
 echo "Activating virtual environment"
 source .local/bin/activate
+
+# set NLTK data directory to avoid download errors
+export NLTK_DATA="$PWD/.local/nltk_data"
+mkdir -p $NLTK_DATA
+
 sleep 5
 # run experiment
 echo "Running experiment"
