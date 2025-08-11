@@ -193,10 +193,10 @@ def execute_memit(
             targets.double(),
         )
 
-        adj_k = torch.linalg.solve(
-            hparams.mom2_update_weight * cov.double() + layer_ks @ layer_ks.T,
-            layer_ks,
-        )
+        # Convert to float32 for linalg.solve (not supported in half precision)
+        A = hparams.mom2_update_weight * cov.double() + layer_ks @ layer_ks.T
+        B = layer_ks
+        adj_k = torch.linalg.solve(A.float(), B.float())
         resid = targets / (len(hparams.layers) - i)  # Distribute residual across layers
         upd_matrix = resid @ adj_k.T
 
@@ -266,7 +266,7 @@ def get_cov(
         COV_CACHE[key] = stat.mom2.moment().float().to("cpu")
 
     return (
-        torch.inverse(COV_CACHE[key].to("cuda")) if inv else COV_CACHE[key].to("cuda")
+        torch.inverse(COV_CACHE[key].to("cuda").float()).half() if inv else COV_CACHE[key].to("cuda")
     )
 
 

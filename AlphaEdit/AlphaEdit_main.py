@@ -132,9 +132,11 @@ def apply_AlphaEdit_to_model(
         resid = resid.to(torch.float16)
         layer_ks = layer_ks.to(torch.float16)
         
-        upd_matrix = torch.linalg.solve(
-                P[i,:,:].cuda() @ (layer_ks @ layer_ks.T + cache_c[i,:,:].cuda()) + hparams.L2*torch.eye(layer_ks.shape[0], dtype=torch.float16,device="cuda"), P[i,:,:].cuda() @ layer_ks @ resid.T
-        )
+        # Convert to float32 for linalg.solve (not supported in half precision)
+        A = P[i,:,:].cuda() @ (layer_ks @ layer_ks.T + cache_c[i,:,:].cuda()) + hparams.L2*torch.eye(layer_ks.shape[0], dtype=torch.float16,device="cuda")
+        B = P[i,:,:].cuda() @ layer_ks @ resid.T
+        
+        upd_matrix = torch.linalg.solve(A.float(), B.float()).half()
         # Adjust update matrix shape
         weight_name = f"{hparams.rewrite_module_tmp.format(layer)}.weight"
         upd_matrix = upd_matrix_match_shape(upd_matrix, weights[weight_name].shape)
@@ -191,7 +193,7 @@ def get_cov(
         COV_CACHE[key] = stat.mom2.moment().float().to("cpu")
 
     return (
-        torch.inverse(COV_CACHE[key].to("cuda")) if inv else COV_CACHE[key].to("cuda")
+        torch.inverse(COV_CACHE[key].to("cuda").float()).half() if inv else COV_CACHE[key].to("cuda")
     )
 
 

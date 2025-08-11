@@ -336,9 +336,10 @@ def main_from_line_224(
                     for k, v in weights_copy.items():
                         current_weight = nethook.get_parameter(model, k)
                         upd_matrix[k] = current_weight - v.to("cuda")
-                        _, S_orig, _ = torch.svd(v)
+                        # Convert to float32 for svd (not supported in half precision)
+                        _, S_orig, _ = torch.svd(v.float())
                         max_sigma = S_orig.max().item()
-                        U_upd, S_upd, V_upd = torch.svd(upd_matrix[k])
+                        U_upd, S_upd, V_upd = torch.svd(upd_matrix[k].float())
                         adjusted_S = torch.where(
                             S_upd > max_sigma,
                             torch.log(S_upd) - torch.log(torch.tensor(max_sigma, device='cuda')) + max_sigma,
