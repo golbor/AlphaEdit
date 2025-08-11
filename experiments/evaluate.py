@@ -199,13 +199,13 @@ def main(
         # Iterate through dataset
         W_out = nethook.get_parameter(model, f"{hparams.rewrite_module_tmp.format(hparams.layers[-1])}.weight")
         if hparams.model_name == "gpt2-xl":
-            cache_c = torch.zeros((len(hparams.layers), W_out.shape[0], W_out.shape[0]), device="cpu")
+            cache_c = torch.zeros((len(hparams.layers), W_out.shape[0], W_out.shape[0]), device="cpu", dtype=torch.float16)
             if alg_name == "AlphaEdit":
-                P = torch.zeros((len(hparams.layers), W_out.shape[0], W_out.shape[0]), device="cpu")
+                P = torch.zeros((len(hparams.layers), W_out.shape[0], W_out.shape[0]), device="cpu", dtype=torch.float16)
         elif hparams.model_name in ["EleutherAI_gpt-j-6B","Llama3-8B","phi-1.5"]:
-            cache_c = torch.zeros((len(hparams.layers), W_out.shape[1], W_out.shape[1]), device="cpu")
+            cache_c = torch.zeros((len(hparams.layers), W_out.shape[1], W_out.shape[1]), device="cpu", dtype=torch.float16)
             if alg_name == "AlphaEdit":
-                P = torch.zeros((len(hparams.layers), W_out.shape[1], W_out.shape[1]), device="cpu")
+                P = torch.zeros((len(hparams.layers), W_out.shape[1], W_out.shape[1]), device="cpu", dtype=torch.float16)
         del W_out
     if alg_name == "AlphaEdit":
         for i, layer in enumerate(hparams.layers):
