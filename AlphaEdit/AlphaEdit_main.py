@@ -127,8 +127,13 @@ def apply_AlphaEdit_to_model(
         repeat_factor = (layer_ks.size(1) // targets.size(1))
         targets = targets.repeat_interleave(repeat_factor, dim=1)
         resid = targets / (len(hparams.layers) - i)  # Distribute residual across layers
+        
+        # Ensure all tensors have consistent dtype (float16)
+        resid = resid.to(torch.float16)
+        layer_ks = layer_ks.to(torch.float16)
+        
         upd_matrix = torch.linalg.solve(
-                P[i,:,:].cuda() @ (layer_ks @ layer_ks.T + cache_c[i,:,:].cuda()) + hparams.L2*torch.eye(layer_ks.shape[0], dtype=torch.float,device="cuda"), P[i,:,:].cuda() @ layer_ks @ resid.T
+                P[i,:,:].cuda() @ (layer_ks @ layer_ks.T + cache_c[i,:,:].cuda()) + hparams.L2*torch.eye(layer_ks.shape[0], dtype=torch.float16,device="cuda"), P[i,:,:].cuda() @ layer_ks @ resid.T
         )
         # Adjust update matrix shape
         weight_name = f"{hparams.rewrite_module_tmp.format(layer)}.weight"
@@ -145,6 +150,7 @@ def apply_AlphaEdit_to_model(
         torch.cuda.empty_cache()
     for i, layer in enumerate(hparams.layers):
         layer_ks = compute_ks(model, tok, requests, hparams, layer, context_templates).T
+        layer_ks = layer_ks.to(torch.float16)
         cache_c[i,:,:] += layer_ks.cpu() @ layer_ks.cpu().T
 
     print(f"Deltas successfully computed for {list(weights.keys())}")
