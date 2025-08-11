@@ -120,6 +120,10 @@ def main(
             torch_dtype=torch.float16,
             low_cpu_mem_usage=True
         ).cuda()
+        # Fix generation config warnings
+        model.generation_config.do_sample = False
+        model.generation_config.temperature = None
+        model.generation_config.top_p = None
         tok = AutoTokenizer.from_pretrained(model_name)
         tok.pad_token = tok.eos_token
     else:
