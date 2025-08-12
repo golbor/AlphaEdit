@@ -101,7 +101,8 @@ class MRPCEval():
                 prefix_tok_len = prefix_tok_len - 1
 
             max_len = input_prompt_ids.shape[1] + gen_len
-            output = self.model.generate(input_prompt_ids,max_length = max_len, do_sample = False)
+            attention_mask = torch.ones_like(input_prompt_ids)
+            output = self.model.generate(input_prompt_ids, attention_mask=attention_mask, max_length=max_len, do_sample=False, pad_token_id=self.tokenizer.eos_token_id)
             generated_text = self.tokenizer.decode(output[0], skip_special_tokens=True)
             answer = self._get_answer(generated_text)
 
