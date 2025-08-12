@@ -10,7 +10,7 @@
 #SBATCH --nodelist=worker-3
 
 # activate environment
-source .venv/bin/actuvate
+source .venv/bin/activate
 
 pip list
 

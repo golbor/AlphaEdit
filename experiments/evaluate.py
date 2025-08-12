@@ -7,7 +7,46 @@ from time import time
 from typing import Tuple, Union
 import numpy as np
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+import sys
+import warnings
+
+# Check CUDA availability
+if not torch.cuda.is_available():
+    print("WARNING: CUDA not available. This script requires GPU.")
+    print("Available devices:", torch.cuda.device_count() if torch.cuda.is_available() else "None")
+
+# Check specific GPU device
+try:
+    gpu_id = int(os.environ.get("CUDA_VISIBLE_DEVICES", "0"))
+    if torch.cuda.is_available() and gpu_id >= torch.cuda.device_count():
+        print(f"WARNING: GPU {gpu_id} not available. Available GPUs: {torch.cuda.device_count()}")
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+except ValueError:
+    pass
+
+# Download required NLTK data
+try:
+    import nltk
+    nltk.download('punkt_tab', quiet=True)
+    nltk.download('punkt', quiet=True)
+    print("NLTK data downloaded successfully")
+except Exception as e:
+    print(f"Warning: Failed to download NLTK data: {e}")
+    print("You may need to run: python -c \"import nltk; nltk.download('punkt_tab'); nltk.download('punkt')\"")
+
+# Check memory
+if torch.cuda.is_available():
+    gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1e9
+    print(f"GPU memory available: {gpu_memory:.1f} GB")
+    if gpu_memory < 10:
+        print("WARNING: Low GPU memory. Large models may cause OOM errors.")
+
+try:
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+except ImportError as e:
+    print(f"Error importing transformers: {e}")
+    print("Please install with: pip install transformers")
+    sys.exit(1)
 
 from baselines.ft import FTHyperParams, apply_ft_to_model
 from baselines.mend import MENDHyperParams, MendRewriteExecutor
@@ -92,8 +131,16 @@ def main(
         else:
             run_id = 0
         run_dir = RESULTS_DIR / dir_name / f"run_{str(run_id).zfill(3)}"
-        run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Results will be stored at {run_dir}")
+        try:
+            run_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Results will be stored at {run_dir}")
+        except PermissionError:
+            print(f"Error: No permission to create directory {run_dir}")
+            print("Please check write permissions or run with appropriate privileges")
+            sys.exit(1)
+        except OSError as e:
+            print(f"Error creating directory {run_dir}: {e}")
+            sys.exit(1)
     if "MEMIT" in alg_name:
     # Get run hyperparameters
         params_path = (
@@ -115,25 +162,48 @@ def main(
     # Instantiate vanilla model
     if type(model_name) is str:
         print("Instantiating model")
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name, 
-            torch_dtype=torch.float16,
-            low_cpu_mem_usage=True
-        ).cuda()
-        # Fix generation config warnings
-        model.generation_config.do_sample = False
-        model.generation_config.temperature = None
-        model.generation_config.top_p = None
-        tok = AutoTokenizer.from_pretrained(model_name)
-        tok.pad_token = tok.eos_token
+        try:
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name, 
+                torch_dtype=torch.float16,
+                low_cpu_mem_usage=True
+            ).cuda()
+            # Fix generation config warnings
+            model.generation_config.do_sample = False
+            model.generation_config.temperature = None
+            model.generation_config.top_p = None
+            print(f"Model loaded successfully: {model_name}")
+        except Exception as e:
+            print(f"Error loading model {model_name}: {e}")
+            print("This could be due to:")
+            print("- Insufficient GPU memory")
+            print("- Network issues downloading the model")
+            print("- Invalid model name")
+            raise e
+        
+        try:
+            tok = AutoTokenizer.from_pretrained(model_name)
+            tok.pad_token = tok.eos_token
+        except Exception as e:
+            print(f"Error loading tokenizer for {model_name}: {e}")
+            raise e
     else:
         model, tok = model_name
         model_name = model.config._name_or_path
 
     # Load data
     print("Loading dataset, attribute snippets, tf-idf data")
-    snips = AttributeSnippets(DATA_DIR) if not skip_generation_tests else None
-    vec = get_tfidf_vectorizer(DATA_DIR) if not skip_generation_tests else None
+    try:
+        snips = AttributeSnippets(DATA_DIR) if not skip_generation_tests else None
+        vec = get_tfidf_vectorizer(DATA_DIR) if not skip_generation_tests else None
+        print("Data loaded successfully")
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        print("This could be due to:")
+        print("- Missing data files (will attempt to download)")
+        print("- Network issues during download")
+        print("- Insufficient disk space")
+        # Continue execution - data will be downloaded automatically
 
     if num_edits > 1:
         assert ds_name != "cf", f"{ds_name} does not support multiple edits"
@@ -227,7 +297,15 @@ def main(
     # torch.save(hs, "pre_edit_hs.pt")
     # del hs
     glue_save_location = str(run_dir) + '/' + 'glue_eval/'
-    os.makedirs(glue_save_location, exist_ok=True)
+    try:
+        os.makedirs(glue_save_location, exist_ok=True)
+    except PermissionError:
+        print(f"Error: No permission to create GLUE directory {glue_save_location}")
+        print("GLUE evaluation will be skipped")
+        glue_save_location = None
+    except OSError as e:
+        print(f"Error creating GLUE directory {glue_save_location}: {e}")
+        glue_save_location = None
     cnt = 0
     for record_chunks in chunks(ds, num_edits):
         case_result_template = str(run_dir / "{}_edits-case_{}.json")
@@ -253,7 +331,7 @@ def main(
         etc_args = dict(cache_template=cache_template) if any(alg in alg_name for alg in ["ROME", "MEMIT","AlphaEdit", "MEMIT_seq", "MEMIT_prune", "NSE"]) else dict()
         seq_args = dict(cache_c=cache_c) if any(alg in alg_name for alg in ["AlphaEdit", "MEMIT_seq", "NSE"]) else dict()
         nc_args = dict(P = P) if any(alg in alg_name for alg in ["AlphaEdit"]) else dict()
-        if cnt == 0 and args.downstream_eval_steps > 0:#do initial GLUE EVAL WITH ORIGINAL MODEL
+        if cnt == 0 and args.downstream_eval_steps > 0 and glue_save_location is not None:#do initial GLUE EVAL WITH ORIGINAL MODEL
             glue_results = {'edit_num': -1}
 
             out_file = glue_save_location + "base.json"
@@ -373,7 +451,7 @@ def main(
         print("Execution took", exec_time)
         # Evaluate new model
     
-        if args.downstream_eval_steps > 0 and cnt % args.downstream_eval_steps == 0:
+        if args.downstream_eval_steps > 0 and cnt % args.downstream_eval_steps == 0 and glue_save_location is not None:
             glue_results = {
                         'edit_num': cnt*num_edits,
                         'case_id': case_ids
