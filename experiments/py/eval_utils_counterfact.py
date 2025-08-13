@@ -158,7 +158,7 @@ def test_batch_prediction(
     if 'llama' in model.config._name_or_path.lower():
         logits = logits[:, 1:, :]
 
-    probs = np.zeros((logits.size(0),), dtype=np.float32)
+    probs = np.zeros((logits.size(0),), dtype='float32')
     targets_correct = []
 
     for i in range(logits.size(0)):

@@ -1059,7 +1059,7 @@ class Quantile(Stat):
         if self.firstfree[0]:
             self._scan_extremes(self.data[0][:, : self.firstfree[0]].t())
         size = sum(self.firstfree)
-        weights = torch.FloatTensor(size)  # Floating point
+        weights = torch.tensor(size, dtype=torch.float32)  # Floating point
         summary = torch.zeros(self.depth, size, dtype=self.dtype, device=self.device)
         index = 0
         for level, ff in enumerate(self.firstfree):
@@ -1415,7 +1415,7 @@ def pull_key_prefix(prefix, d):
 # as the NaN value with hex pattern 0xfff8000000000002.
 
 null_numpy_value = numpy.array(
-    struct.unpack(">d", struct.pack(">Q", 0xFFF8000000000002))[0], dtype=numpy.float64
+    struct.unpack(">d", struct.pack(">Q", 0xFFF8000000000002))[0], dtype='float64'
 )
 
 
@@ -1722,15 +1722,15 @@ def _unit_test():
     data /= 2
     depth = 50
     alldata = data[:, None] + (numpy.arange(depth) * amount)[None, :]
-    actual_sum = torch.FloatTensor(numpy.sum(alldata * alldata, axis=0))
+    actual_sum = torch.tensor(numpy.sum(alldata * alldata, axis=0), dtype=torch.float32)
     amt = amount // depth
     for r in range(depth):
         numpy.random.shuffle(alldata[r * amt : r * amt + amt, r])
     if args.mode == "cuda":
-        alldata = torch.cuda.FloatTensor(alldata)
+        alldata = torch.tensor(alldata, dtype=torch.float32, device='cuda')
         device = torch.device("cuda")
     else:
-        alldata = torch.FloatTensor(alldata)
+        alldata = torch.tensor(alldata, dtype=torch.float32)
         device = None
     starttime = time.time()
     cs = CombinedStat(
