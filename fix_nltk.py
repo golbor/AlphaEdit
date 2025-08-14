@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 # Get NLTK data directory from environment
-nltk_data_dir = os.environ.get('NLTK_DATA', os.path.expanduser("~/nltk_data"))
+nltk_data_dir = os.environ.get('NLTK_DATA', os.path.expanduser("/home/stud/golab/nltk_data"))
 os.makedirs(nltk_data_dir, exist_ok=True)
 
 print(f"NLTK data directory: {nltk_data_dir}")
