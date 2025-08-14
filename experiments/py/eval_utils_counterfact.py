@@ -7,6 +7,7 @@ appropriate arguments, which returns a dictionary containing them.
 import typing
 from itertools import chain
 
+import nltk
 import numpy as np
 import scipy
 import torch
@@ -253,7 +254,6 @@ def compute_n_gram_entropy(sentence, ns=None, weights=None, agg="arith"):
 
 
 def compute_freq(sentence, n=2):
-    import nltk
     tokens = nltk.word_tokenize(sentence)
     ngrams = nltk.ngrams(tokens, n)
     return nltk.FreqDist(ngrams)
