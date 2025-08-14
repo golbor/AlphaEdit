@@ -6,7 +6,7 @@
 #SBATCH --time=3-00:00:00
 #SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=8
-#SBATCH --export=NONE
+#SBATCH --export=ALL
 #SBATCH --nodelist=worker-4
 
 nvidia-smi
@@ -16,6 +16,11 @@ echo changing directory to AlphaEdit
 cd /home/stud/golab/AlphaEdit
 
 pwd
+
+# Set required environment variables
+export HOME=/home/stud/golab
+export XDG_CONFIG_HOME=$HOME/.config
+export MPLCONFIGDIR=$HOME/.config/matplotlib
 
 # activate environment
 source .venv/bin/activate
