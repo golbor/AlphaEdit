@@ -9,7 +9,7 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --export=ALL
-#SBATCH --nodelist=worker-6
+#SBATCH --nodelist=worker-4
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=golab.borzooei@campus.lmu.de
 
