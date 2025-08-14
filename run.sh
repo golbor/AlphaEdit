@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 #
-#SBATCH --job-name=AlphaEdit
+#SBATCH --job-name=alpha-edit
 #SBATCH --output=output.txt
 #SBATCH --ntasks=1
 #SBATCH --time=3-00:00:00
 #SBATCH --gres=gpu:2
 #SBATCH --cpus-per-task=8
 #SBATCH --export=NONE
-#SBATCH --nodelist=worker-3
+#SBATCH --nodelist=worker-4
+
+nvidia-smi
+
+echo changing directory to AlphaEdit
+
+cd /home/stud/golab/AlphaEdit
+
+pwd
 
 # activate environment
 source .venv/bin/activate
