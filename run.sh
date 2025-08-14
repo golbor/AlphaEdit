@@ -22,7 +22,10 @@ source .venv/bin/activate
 
 pip list
 
+# Create NLTK data directory and set environment variable
+mkdir -p ~/nltk_data
 export NLTK_DATA=~/nltk_data
+
 python3 fix_nltk.py
 
 python3 -c "import nltk; nltk.download('punkt_tab'); nltk.download('punkt')"
