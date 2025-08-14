@@ -23,8 +23,8 @@ source .venv/bin/activate
 pip list
 
 # Create NLTK data directory and set environment variable
-mkdir -p ~/nltk_data
-export NLTK_DATA=~/nltk_data
+mkdir -p ./nltk_data
+export NLTK_DATA=/home/stud/golab/AlphaEdit/nltk_data
 
 python3 fix_nltk.py
 
