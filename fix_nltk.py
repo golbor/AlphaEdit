@@ -3,11 +3,15 @@
 Fix NLTK initialization issues by setting up proper data directory and downloading required data.
 """
 import os
-import nltk
 
-# Set NLTK data directory
+# Set NLTK_DATA environment variable before importing nltk
 nltk_data_dir = os.path.expanduser("~/nltk_data")
 os.makedirs(nltk_data_dir, exist_ok=True)
+os.environ['NLTK_DATA'] = nltk_data_dir
+
+import nltk
+
+# Ensure NLTK data directory is in the path
 nltk.data.path.append(nltk_data_dir)
 
 # Download required NLTK data
