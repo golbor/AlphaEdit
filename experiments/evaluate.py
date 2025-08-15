@@ -509,7 +509,12 @@ def main(
         #     for k, v in weights_copy.items():
         #         nethook.get_parameter(model, k)[...] = v.to("cuda")
 
-        print("Evaluation took", time() - start)
+        eval_time = time() - start
+        print(f"Evaluation took {eval_time:.2f} seconds")
+        
+        # Add performance warning if evaluation is too slow
+        if eval_time > 10:
+            print(f"WARNING: Evaluation taking {eval_time:.1f}s per case. Consider using --skip_generation_tests or --generation_test_interval 10")
 def get_project(model, tok, layer, hparams):
     force_recompute = False
     cov = get_cov(
