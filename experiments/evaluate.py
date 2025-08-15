@@ -307,6 +307,7 @@ def main(
         print(f"Error creating GLUE directory {glue_save_location}: {e}")
         glue_save_location = None
     cnt = 0
+    edited_case_ids = set()  # Track which cases have been edited
     for record_chunks in chunks(ds, num_edits):
         case_result_template = str(run_dir / "{}_edits-case_{}.json")
         print(f"=================================================================={cnt+1}_edit==================================================================")
@@ -323,6 +324,7 @@ def main(
         
         # Compute weight changes + record weights that changed
         case_ids = [record["case_id"] for record in record_chunks]
+        edited_case_ids.update(case_ids)  # Track edited cases
         args_conserve_memory = (
             dict(return_orig_weights_device=("cpu" if conserve_memory else "cuda"))
             if conserve_memory
@@ -478,7 +480,10 @@ def main(
     # torch.save(hs, "post_edit_hs_memit.pt")
     start = time()
     gen_test_vars = [snips, vec]
+    # Only evaluate records that were actually edited
     for record in ds:
+        if record["case_id"] not in edited_case_ids:
+            continue
         out_file = Path(case_result_template.format(num_edits, record["case_id"]))
         if out_file.exists():
             print(f"Skipping {out_file}; already exists")
